@@ -216,8 +216,9 @@ func Login(c *gin.Context) {
 		}
 	}
 	fmt.Println("userTemp", userTemp)
-	token, _ := jwtMain.GenerateToken( userTemp.Uuid, time.Now().Add(50*time.Minute))
-	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"token": token,}})
+	token01, _ := jwtMain.GenerateToken(userTemp.Uuid, time.Now().Add(5*time.Minute))
+	token02, _ := jwtMain.GenerateToken(userTemp.Uuid, time.Now().Add(7*24*time.Minute))
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"accessToken": token01, "refreshToken": token02}})
 }
 
 // @Summary 刷新重置token
