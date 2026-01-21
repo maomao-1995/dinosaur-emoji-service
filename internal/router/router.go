@@ -40,9 +40,10 @@ func SetupRouter() *gin.Engine {
 	emojiGroup := r.Group("/emoji")
 	emojiGroup.Use(middleware.ParseToken())
 	{
-		emojiGroup.GET("/detail", handler.EmojiDetail)
+		emojiGroup.POST("/detail", handler.EmojiDetail)
 		emojiGroup.POST("/add", handler.EmojiAdd)
 		emojiGroup.POST("/delete", handler.EmojiDelete)
+		emojiGroup.POST("/edit", handler.EmojiEdit)
 	}
 	return r
 }

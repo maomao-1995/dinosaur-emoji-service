@@ -91,7 +91,7 @@ func Register(c *gin.Context) {
 		Email:     params.Email,
 		Password:  hashedPasswordString,
 		Nickname:  params.Nickname,
-		Uuid:uuid.New().String(),
+		Uuid:      uuid.New().String(),
 	}
 
 	selectErr01 := database.DB.Where("phone = ?", params.Phone).First(&newUser).Error

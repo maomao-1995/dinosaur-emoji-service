@@ -8,7 +8,7 @@ import (
 
 // 自定义声明
 type MyClaims struct {
-	Uuid  string `json:"username"`
+	Uuid string `json:"username"`
 	jwt.RegisteredClaims
 }
 
