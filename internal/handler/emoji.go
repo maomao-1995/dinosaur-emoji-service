@@ -40,7 +40,7 @@ type EmojiDetailDTO struct {
 func EmojiDetail(c *gin.Context) {
 	var params EmojiDetailRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		c.JSON(400, gin.H{"code": 400, "msg": "查询失败", "error": err.Error()})
 		return
 	}
 
@@ -60,8 +60,8 @@ type EmojiAddRequest struct {
 	Tags []string `json:"tags" binding:"required"`
 }
 
-// @Summary 新增表情
-// @Description 新增表情
+// @Summary 创建表情
+// @Description 创建表情
 // @Tags emoji
 // @Accept json
 // @Produce json
@@ -73,7 +73,7 @@ type EmojiAddRequest struct {
 func EmojiAdd(c *gin.Context) {
 	var params EmojiAddRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		c.JSON(400, gin.H{"code": 400, "msg": "创建失败", "error": err.Error()})
 		return
 	}
 
@@ -115,7 +115,7 @@ type EmojiDeleteRequest struct {
 func EmojiDelete(c *gin.Context) {
 	var params EmojiDeleteRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		c.JSON(400, gin.H{"code": 400, "msg": "删除失败", "error": err.Error()})
 		return
 	}
 	fmt.Println("删除表情，ID：", params.ID)
@@ -145,7 +145,7 @@ type EmojiEditRequest struct {
 func EmojiEdit(c *gin.Context) {
 	var params EmojiEditRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		c.JSON(400, gin.H{"code": 400, "msg": "保存失败", "error": err.Error()})
 		return
 	}
 	fmt.Println("编辑表情，参数：", params)

@@ -40,10 +40,25 @@ func SetupRouter() *gin.Engine {
 	emojiGroup := r.Group("/emoji")
 	emojiGroup.Use(middleware.ParseToken())
 	{
-		emojiGroup.POST("/detail", handler.EmojiDetail)
+		emojiGroup.GET("/detail", handler.EmojiDetail)
 		emojiGroup.POST("/add", handler.EmojiAdd)
 		emojiGroup.POST("/delete", handler.EmojiDelete)
 		emojiGroup.POST("/edit", handler.EmojiEdit)
 	}
+
+	//emojiPack路由
+	emojiPackGroup := r.Group("/emojiPack")
+	emojiPackGroup.Use(middleware.ParseToken())
+	{
+		emojiPackGroup.POST("/add", handler.EmojiPackAdd)
+		emojiPackGroup.POST("/edit", handler.EmojiPackEdit)
+		emojiPackGroup.POST("/delete", handler.EmojiPackDelete)
+		emojiPackGroup.GET("/detail", handler.EmojiPackDetail)
+		emojiPackGroup.GET("/listByUser", handler.EmojiPackListByUser)
+		emojiPackGroup.POST("/emojiPackAddEmoji", handler.EmojiPackAddEmoji)
+		emojiPackGroup.POST("/emojiPackRemoveEmoji", handler.EmojiPackRemoveEmoji)
+	}
+	r.GET("/emojiPack/list", handler.EmojiPackList)
+
 	return r
 }
