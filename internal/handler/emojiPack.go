@@ -169,6 +169,13 @@ func EmojiPackDetail(c *gin.Context) {
 		return
 	}
 
+	//data解析
+	EmojiPackDetailDTO.Tags = make([]string, 0)
+	if err := json.Unmarshal(emojiPackDetail.Tags, &EmojiPackDetailDTO.Tags); err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
+		return
+	}
+
 	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集详情成功", "data": EmojiPackDetailDTO})
 }
 
@@ -310,4 +317,55 @@ func EmojiPackRemoveEmoji(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"code": 200, "msg": "从表情包合集移除表情成功"})
+}
+
+type EmojiPackGetEmojisRequest struct {
+	EmojiPackID uint `json:"emojiPackId" binding:"required"`
+}
+type EmojiPackGetEmojisDTO struct {
+	Name string   `json:"name"`
+	URL  string   `json:"url"`
+	Tags []string `json:"tags"`
+}
+
+// emojiPackGetemojis 获取表情包合集内的表情列表
+// @Description 获取表情包合集内的表情列表
+// @Tags emojiPack
+// @Accept json
+// @Produce json
+// @Param emojiPack body EmojiPackDeleteRequest true "EmojiPack ID"
+// @Success 200 {object} map[string]interface{} "{"code":200,"msg":"获取表情包合集内的表情列表成功","data":[]}"
+// @Failure 400 {object} map[string]interface{} "{"code":400,"msg":"xxxx"}"
+// @Router /emojiPack/getemojis [post]
+func EmojiPackGetEmojis(c *gin.Context) {
+	var params EmojiPackGetEmojisRequest
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		return
+	}
+	var emojis []model.Emoji
+	if err := database.DB.Table("emoji_pack_emojis").Select("emojis.name, emojis.url, emojis.tags").
+		Joins("join emojis on emoji_pack_emojis.emoji_id = emojis.id").
+		Where("emoji_pack_emojis.emoji_pack_id = ?", params.EmojiPackID).
+		Scan(&emojis).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集内的表情列表失败", "error": err.Error()})
+		return
+	}
+
+	// 处理数据
+	resp := make([]EmojiPackGetEmojisDTO, 0, len(emojis))
+	for _, pack := range emojis {
+		tagsTemp := make([]string, 0)
+		if err := json.Unmarshal(pack.Tags, &tagsTemp); err != nil {
+			c.JSON(500, gin.H{"code": 500, "msg": "解析表情标签失败", "error": err.Error()})
+			return
+		}
+		resp = append(resp, EmojiPackGetEmojisDTO{
+			Name: pack.Name,
+			URL:  pack.URL,
+			Tags: tagsTemp,
+		})
+	}
+
+	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集内的表情列表成功", "data": resp})
 }
