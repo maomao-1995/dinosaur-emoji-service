@@ -14,6 +14,7 @@ type UserDTO struct {
 	Email    string `json:"email"`
 	Nickname string `json:"nickname"`
 	Id       int64  `json:"id"`
+	Uuid     string `json:"uuid"`
 }
 
 // @Summary 获取用户信息
@@ -33,6 +34,7 @@ func UserInfo(c *gin.Context) {
 		Select("id,username, phone,email,nickname").
 		Where("uuid = ?", uuid).
 		Scan(&userTemp).Error
+	userTemp.Uuid = uuid
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "用户不存在"})
 		return
