@@ -1,9 +1,9 @@
 package database
 
 import (
+	"dinosaur-emoji-service/config"
+	"dinosaur-emoji-service/internal/model"
 	"fmt"
-	"fun-service/config"
-	"fun-service/internal/model"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

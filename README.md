@@ -1,4 +1,4 @@
-### fun-service
+### dinosaur-emoji-service
 #### 依赖环境
 ```
 go v1.24.5

@@ -1,8 +1,8 @@
 package router
 
 import (
-	"fun-service/internal/handler"
-	"fun-service/internal/middleware"
+	"dinosaur-emoji-service/internal/handler"
+	"dinosaur-emoji-service/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"

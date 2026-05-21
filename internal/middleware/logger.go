@@ -3,7 +3,7 @@ package middleware
 import (
 	"time"
 
-	"fun-service/pkg/logger" // 引入之前实现的日志工具
+	"dinosaur-emoji-service/pkg/logger" // 引入之前实现的日志工具
 
 	"github.com/gin-gonic/gin"
 )

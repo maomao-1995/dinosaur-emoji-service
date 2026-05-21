@@ -2,18 +2,18 @@ package handler
 
 import (
 	"crypto/md5"
+	"dinosaur-emoji-service/internal/model"
+	"dinosaur-emoji-service/pkg/database"
 	"encoding/hex"
 	"fmt"
-	"fun-service/internal/model"
-	"fun-service/pkg/database"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"fun-service/pkg/jwtMain"
-	"fun-service/pkg/redisMain"
-	"fun-service/pkg/utils"
+	"dinosaur-emoji-service/pkg/jwtMain"
+	"dinosaur-emoji-service/pkg/redisMain"
+	"dinosaur-emoji-service/pkg/utils"
 	"net/http"
 	"time"
 

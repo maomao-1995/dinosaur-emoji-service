@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"dinosaur-emoji-service/pkg/redisMain"
 	"fmt"
-	"fun-service/pkg/redisMain"
 	"math/rand"
 	"time"
 

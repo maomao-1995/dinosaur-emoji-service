@@ -1,4 +1,4 @@
-module fun-service
+module dinosaur-emoji-service
 
 go 1.24.5
 

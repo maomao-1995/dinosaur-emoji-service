@@ -1,14 +1,14 @@
 package main
 
 import (
+	"dinosaur-emoji-service/config"
+	_ "dinosaur-emoji-service/docs"
+	_ "dinosaur-emoji-service/internal/handler"
+	"dinosaur-emoji-service/internal/router"
+	"dinosaur-emoji-service/pkg/database"
+	"dinosaur-emoji-service/pkg/logger"
+	"dinosaur-emoji-service/pkg/redisMain"
 	"fmt"
-	"fun-service/config"
-	_ "fun-service/docs"
-	_ "fun-service/internal/handler"
-	"fun-service/internal/router"
-	"fun-service/pkg/database"
-	"fun-service/pkg/logger"
-	"fun-service/pkg/redisMain"
 )
 
 // @title Fun Service API

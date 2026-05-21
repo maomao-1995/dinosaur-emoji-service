@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fun-service/pkg/jwtMain"
+	"dinosaur-emoji-service/pkg/jwtMain"
 	"strings"
 
 	"github.com/gin-gonic/gin"

@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"dinosaur-emoji-service/internal/model"
+	"dinosaur-emoji-service/pkg/database"
 	"fmt"
-	"fun-service/internal/model"
-	"fun-service/pkg/database"
 
 	"encoding/json"
 

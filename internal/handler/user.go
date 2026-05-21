@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"fun-service/internal/model"
-	"fun-service/pkg/database"
+	"dinosaur-emoji-service/internal/model"
+	"dinosaur-emoji-service/pkg/database"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
