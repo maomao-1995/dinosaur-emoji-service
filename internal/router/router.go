@@ -3,7 +3,9 @@ package router
 import (
 	"dinosaur-emoji-service/internal/handler"
 	"dinosaur-emoji-service/internal/middleware"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -12,10 +14,20 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// 全局跨域配置
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // 允许所有域名，生产可指定前端地址
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	// 配置静态文件服务
 	r.Static("/uploads", "./uploads")
 
-	// 全局中间件
+	// Logger中间件
 	r.Use(middleware.Logger())
 
 	// 注册Swagger路由
@@ -44,6 +56,7 @@ func SetupRouter() *gin.Engine {
 		emojiGroup.POST("/add", handler.EmojiAdd)
 		emojiGroup.POST("/delete", handler.EmojiDelete)
 		emojiGroup.POST("/edit", handler.EmojiEdit)
+
 	}
 
 	//emojiPack路由
