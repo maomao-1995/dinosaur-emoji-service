@@ -37,17 +37,23 @@ func SetupRouter() *gin.Engine {
 	// 注意：默认是阻塞式的，会一直运行直到被中断
 
 	//全局路由
-	r.POST("/register", handler.Register)
 	r.POST("/sendCode", handler.SendCode)
-	r.POST("/login", handler.Login)
 	r.GET("/refresh", handler.Refresh)
 	r.POST("/upload", handler.Upload)
+
 	// 用户路由
 	userGroup := r.Group("/user")
-	userGroup.Use(middleware.ParseToken())
+	userPrivate := userGroup.Group("")
+	userPrivate.Use(middleware.ParseToken())
 	{
-		userGroup.GET("/info", handler.UserInfo)
+		userPrivate.GET("/info", handler.UserInfo)
 	}
+	userPpublic := userGroup.Group("")
+	{
+		userPpublic.POST("/register", handler.UserRegister)
+		userPpublic.POST("/login", handler.Login)
+	}
+
 	//emoji路由
 	emojiGroup := r.Group("/emoji")
 	emojiGroup.Use(middleware.ParseToken())
@@ -56,23 +62,26 @@ func SetupRouter() *gin.Engine {
 		emojiGroup.POST("/add", handler.EmojiAdd)
 		emojiGroup.POST("/delete", handler.EmojiDelete)
 		emojiGroup.POST("/edit", handler.EmojiEdit)
-
 	}
 
 	//emojiPack路由
 	emojiPackGroup := r.Group("/emojiPack")
-	emojiPackGroup.Use(middleware.ParseToken())
+	emojiPackPrivata := emojiPackGroup.Group("")
+	emojiPackPrivata.Use(middleware.ParseToken())
 	{
-		emojiPackGroup.POST("/add", handler.EmojiPackAdd)
-		emojiPackGroup.POST("/edit", handler.EmojiPackEdit)
-		emojiPackGroup.POST("/delete", handler.EmojiPackDelete)
-		emojiPackGroup.GET("/detail", handler.EmojiPackDetail)
-		emojiPackGroup.GET("/listByUser", handler.EmojiPackListByUser)
-		emojiPackGroup.POST("/emojiPackAddEmoji", handler.EmojiPackAddEmoji)
-		emojiPackGroup.POST("/emojiPackRemoveEmoji", handler.EmojiPackRemoveEmoji)
+		emojiPackPrivata.POST("/add", handler.EmojiPackAdd)
+		emojiPackPrivata.POST("/edit", handler.EmojiPackEdit)
+		emojiPackPrivata.POST("/delete", handler.EmojiPackDelete)
+		emojiPackPrivata.GET("/detail", handler.EmojiPackDetail)
+		emojiPackPrivata.GET("/listByUser", handler.EmojiPackListByUser)
+		emojiPackPrivata.POST("/emojiPackAddEmoji", handler.EmojiPackAddEmoji)
+		emojiPackPrivata.POST("/emojiPackRemoveEmoji", handler.EmojiPackRemoveEmoji)
 	}
-	r.GET("/emojiPack/list", handler.EmojiPackList)
-	r.GET("/emojiPack/emojiPackGetEmojis", handler.EmojiPackGetEmojis)
+	emojiPackPublic := emojiPackGroup.Group("")
+	{
+		emojiPackPublic.GET("/list", handler.EmojiPackList)
+		emojiPackPublic.GET("/emojiPackGetEmojis", handler.EmojiPackGetEmojis)
+	}
 
 	return r
 }
