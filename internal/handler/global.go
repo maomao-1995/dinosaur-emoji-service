@@ -2,8 +2,6 @@ package handler
 
 import (
 	"crypto/md5"
-	"dinosaur-emoji-service/internal/model"
-	"dinosaur-emoji-service/pkg/database"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -43,12 +41,12 @@ func SendCode(c *gin.Context) {
 		return
 	}
 
-	var userTemp model.User
-	selectErr := database.DB.Where("phone = ?", params.Phone).First(&userTemp).Error
-	if selectErr == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "手机号已注册"})
-		return
-	}
+	// var userTemp model.User
+	// selectErr := database.DB.Where("phone = ?", params.Phone).First(&userTemp).Error
+	// if selectErr == nil {
+	// 	c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "手机号已注册"})
+	// 	return
+	// }
 
 	_, getErr := redisMain.Rdb.Get(redisMain.Ctx, params.Phone).Result()
 	if getErr == nil {

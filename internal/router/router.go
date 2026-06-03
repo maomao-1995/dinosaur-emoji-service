@@ -41,17 +41,19 @@ func SetupRouter() *gin.Engine {
 	r.GET("/refresh", handler.Refresh)
 	r.POST("/upload", handler.Upload)
 
-	// 用户路由
+	// user路由
 	userGroup := r.Group("/user")
 	userPrivate := userGroup.Group("")
 	userPrivate.Use(middleware.ParseToken())
 	{
 		userPrivate.GET("/info", handler.UserInfo)
 	}
-	userPpublic := userGroup.Group("")
+	userPublic := userGroup.Group("")
 	{
-		userPpublic.POST("/register", handler.UserRegister)
-		userPpublic.POST("/login", handler.Login)
+		userPublic.POST("/register", handler.UserRegister)
+		userPublic.POST("/login", handler.Login)
+		userPublic.POST("/loginAndRegister", handler.LoginAndRegister)
+
 	}
 
 	//emoji路由

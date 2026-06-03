@@ -204,7 +204,7 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"accessToken": token01, "refreshToken": token02}})
 }
 
-type LoginAndRegisterRequest struct {
+type LoginAndRegisterReq struct {
 	Phone string `json:"phone" binding:"required"`
 	Code  string `json:"code" binding:"required"`
 }
@@ -218,13 +218,48 @@ type LoginAndRegisterRequest struct {
 // @Success 200 {object} map[string]interface{} "{"code":200,"msg":"登录成功"}"
 // @Failure 400 {object} map[string]interface{} "{"code":400,"msg":"xxxxx",token:"xxxx"}"
 // @Router /login [post]
-// func LoginAndRegister(c *gin.Context) {
-// 	var params LoginAndRegisterRequest
+func LoginAndRegister(c *gin.Context) {
+	var params LoginAndRegisterReq
 
-// 	jsonErr := c.ShouldBindJSON(&params)
-// 	if jsonErr != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "error": jsonErr.Error(), "msg": "参数错误"})
-// 		return
-// 	}
+	jsonErr := c.ShouldBindJSON(&params)
+	if jsonErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "error": jsonErr.Error(), "msg": "参数错误"})
+		return
+	}
 
-// }
+	code, getCodeErr := redisMain.Rdb.Get(redisMain.Ctx, params.Phone).Result()
+	if getCodeErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "请先发送验证码", "error": getCodeErr.Error()})
+		return
+	}
+	codeTrue := code != params.Code
+	if codeTrue {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "验证码错误"})
+		return
+	}
+
+	var newUser model.User
+	selectErr01 := database.DB.Where("phone = ?", params.Phone).First(&newUser).Error
+
+	if selectErr01 != nil {
+		newUser = model.User{
+			Phone:    params.Phone,
+			Uuid:     uuid.New().String(),
+			Nickname: utils.GenerateRandomNickname(),
+		}
+		createErr := database.DB.Omit("birthdate").Create(&newUser).Error
+		if createErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "自动注册失败，请稍后重试", "error": createErr.Error()})
+			return
+		}
+		fmt.Println("newUser01", newUser)
+		token01, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(5*time.Minute))
+		token02, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(7*24*time.Minute))
+		c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"accessToken": token01, "refreshToken": token02}})
+		return
+	}
+	fmt.Println("newUser02", newUser)
+	token01, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(5*time.Minute))
+	token02, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(7*24*time.Minute))
+	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"accessToken": token01, "refreshToken": token02}})
+}
