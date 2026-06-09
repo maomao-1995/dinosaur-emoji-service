@@ -179,6 +179,11 @@ func EmojiPackDetail(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集详情成功", "data": EmojiPackDetailDTO})
 }
 
+type EmojiListReq struct {
+	Page     int    `form:"page" binding:"required,min=1"`   // 页码
+	PageSize int    `form:"pageSize" binding:"min=1,max=50"` // 每页数量
+	Keyword  string `form:"keyword"`                         // 搜索关键词
+}
 type EmojiPackListDTO struct {
 	ID               uint     `json:"id"`
 	Name             string   `json:"name"`
@@ -188,43 +193,91 @@ type EmojiPackListDTO struct {
 	AuthorUUID       string   `json:"authorUUID"`
 	Tags             []string `json:"tags"`
 }
+type EmojiPackListPageResp[T any] struct {
+	List     []T   `json:"list"`
+	Total    int64 `json:"total"`
+	Page     int   `json:"page"`
+	PageSize int   `json:"pageSize"`
+}
 
 // EmojiPackList 获取表情包合集列表(公有)
 // @Description 获取表情包合集列表(公有)
 // @Tags emojiPack
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Authorization"
 // @Success 200 {object} map[string]interface{} "{"code":200,"msg":"获取表情包合集列表成功","data":[]}"
 // @Failure 500 {object} map[string]interface{} "{"code":500,"msg":"获取表情包合集列表失败"}"
 // @Router /emojiPack/list [get]
 func EmojiPackList(c *gin.Context) {
+	var req EmojiListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		req.Page = 1
+		req.PageSize = 12
+	}
+
 	var emojiPacks []model.EmojiPack
-	if err := database.DB.Find(&emojiPacks).Error; err != nil {
+	var total int64
+
+	db := database.DB.Model(&model.EmojiPack{}).Where("is_default = ?", false)
+	if req.Keyword != "" {
+		// 根据名称模糊搜索
+		db = db.Where("name LIKE ?", "%"+req.Keyword+"%")
+	}
+	// 统计总条数
+	if err := db.Count(&total).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "统计总数失败", "error": err.Error()})
+		return
+	}
+
+	// 分页查询数据
+	offset := (req.Page - 1) * req.PageSize
+	if err := db.Limit(req.PageSize).Offset(offset).Find(&emojiPacks).Error; err != nil {
 		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集列表失败", "error": err.Error()})
 		return
 	}
 
-	resp := make([]EmojiPackListDTO, 0, len(emojiPacks))
+	// model转DTO
+	listDto := make([]EmojiPackListDTO, 0, len(emojiPacks))
 	for _, pack := range emojiPacks {
-
-		tagTemp := make([]string, 0)
-		if err := json.Unmarshal(pack.Tags, &tagTemp); err != nil {
-			c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
-			return
+		var tagTemp []string
+		// json字符串转切片
+		tagsData := pack.Tags
+		if string(tagsData) != "null" && len(tagsData) > 0 {
+			if err := json.Unmarshal(pack.Tags, &tagTemp); err != nil {
+				c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
+				return
+			}
 		}
-
-		resp = append(resp, EmojiPackListDTO{
+		listDto = append(listDto, EmojiPackListDTO{
 			ID:               pack.ID,
 			Name:             pack.Name,
 			IconURL:          pack.IconURL,
 			View_count:       pack.View_count,
 			Collection_count: pack.Collection_count,
+			AuthorUUID:       pack.AuthorUUID,
 			Tags:             tagTemp,
 		})
 	}
+	// 组装分页返回数据
+	pageData := EmojiPackListPageResp[EmojiPackListDTO]{
+		List:     listDto,
+		Total:    total,
+		Page:     req.Page,
+		PageSize: req.PageSize,
+	}
 
-	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集列表成功", "data": resp})
+	c.JSON(200, gin.H{
+		"code": 200,
+		"msg":  "获取表情包合集列表成功",
+		"data": pageData,
+	})
+}
+
+type EmojiPackListByUserPageResp[T any] struct {
+	List     []T   `json:"list"`
+	Total    int64 `json:"total"`
+	Page     int   `json:"page"`
+	PageSize int   `json:"pageSize"`
 }
 
 // EmojiPackListByUser 获取表情包合集列表(用户)
@@ -232,36 +285,84 @@ func EmojiPackList(c *gin.Context) {
 // @Tags emojiPack
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Authorization"
+// @Param Authorization header  true "Authorization"
 // @Success 200 {object} map[string]interface{} "{"code":200,"msg":"获取表情包合集列表成功","data":[]}"
 // @Failure 500 {object} map[string]interface{} "{"code":500,"msg":"获取表情包合集列表失败"}"
 // @Router /emojiPack/listByUser [get]
 func EmojiPackListByUser(c *gin.Context) {
 	userUUID := c.GetString("uuid")
+
+	var req EmojiListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		req.Page = 1
+		req.PageSize = 12
+	}
+
 	var emojiPacks []model.EmojiPack
-	if err := database.DB.Where("author_uuid = ?", userUUID).Find(&emojiPacks).Error; err != nil {
+	var total int64
+
+	db := database.DB.Model(&model.EmojiPack{}).
+		Where("is_default = ?", false).
+		Where("author_uuid = ?", userUUID)
+
+	if req.Keyword != "" {
+		// 根据名称模糊搜索
+		db = db.Where("name LIKE ?", "%"+req.Keyword+"%")
+	}
+
+	// 统计总条数
+	if err := db.Count(&total).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "统计总数失败", "error": err.Error()})
+		return
+	}
+
+	// 分页查询数据
+	offset := (req.Page - 1) * req.PageSize
+	if err := db.Limit(req.PageSize).Offset(offset).Find(&emojiPacks).Error; err != nil {
 		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集列表失败", "error": err.Error()})
 		return
 	}
-	resp := make([]EmojiPackListDTO, 0, len(emojiPacks))
-	for _, pack := range emojiPacks {
 
+	// model转DTO
+	listDto := make([]EmojiPackListDTO, 0, len(emojiPacks))
+	for _, pack := range emojiPacks {
 		tagTemp := make([]string, 0)
 		if err := json.Unmarshal(pack.Tags, &tagTemp); err != nil {
 			c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
 			return
 		}
 
-		resp = append(resp, EmojiPackListDTO{
+		// json字符串转切片
+		tagsData := pack.Tags
+		if string(tagsData) != "null" && len(tagsData) > 0 {
+			if err := json.Unmarshal(pack.Tags, &tagTemp); err != nil {
+				c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
+				return
+			}
+		}
+
+		listDto = append(listDto, EmojiPackListDTO{
 			ID:               pack.ID,
 			Name:             pack.Name,
 			IconURL:          pack.IconURL,
 			View_count:       pack.View_count,
 			Collection_count: pack.Collection_count,
+			AuthorUUID:       pack.AuthorUUID,
 			Tags:             tagTemp,
 		})
 	}
-	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集列表成功", "data": resp})
+	// 组装分页返回数据
+	pageData := EmojiPackListPageResp[EmojiPackListDTO]{
+		List:     listDto,
+		Total:    total,
+		Page:     req.Page,
+		PageSize: req.PageSize,
+	}
+	c.JSON(200, gin.H{
+		"code": 200,
+		"msg":  "获取表情包合集列表成功",
+		"data": pageData,
+	})
 }
 
 type EmojiPackAddEmojiRequest struct {

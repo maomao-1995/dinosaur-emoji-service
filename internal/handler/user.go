@@ -210,7 +210,7 @@ type LoginAndRegisterReq struct {
 }
 
 // @Summary 用户登录以及自动注册
-// @Description 用户登录以及自动注册
+// @Description 用户登录以及自动注册 自动生成默认创建emoji pack
 // @Tags global
 // @Accept json
 // @Produce json
@@ -223,42 +223,55 @@ func LoginAndRegister(c *gin.Context) {
 
 	jsonErr := c.ShouldBindJSON(&params)
 	if jsonErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "error": jsonErr.Error(), "msg": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "error": jsonErr.Error(), "msg": "参数错误"})
 		return
 	}
 
 	code, getCodeErr := redisMain.Rdb.Get(redisMain.Ctx, params.Phone).Result()
 	if getCodeErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "请先发送验证码", "error": getCodeErr.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "请先发送验证码", "error": getCodeErr.Error()})
 		return
 	}
-	codeTrue := code != params.Code
-	if codeTrue {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "验证码错误"})
+
+	if codeTrue := code != params.Code; codeTrue {
+		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "验证码错误"})
 		return
 	}
 
 	var newUser model.User
-	selectErr01 := database.DB.Where("phone = ?", params.Phone).First(&newUser).Error
+	var emojiPack model.EmojiPack
 
-	if selectErr01 != nil {
+	if err := database.DB.Where("phone = ?", params.Phone).First(&newUser).Error; err != nil {
+		var uuid = uuid.New().String()
+		// 创建用户
 		newUser = model.User{
 			Phone:    params.Phone,
-			Uuid:     uuid.New().String(),
+			Uuid:     uuid,
 			Nickname: utils.GenerateRandomNickname(),
 		}
-		createErr := database.DB.Omit("birthdate").Create(&newUser).Error
-		if createErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "自动注册失败，请稍后重试", "error": createErr.Error()})
+		if err := database.DB.Omit("birthdate").Create(&newUser).Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 500, "message": "自动注册失败，请稍后重试", "error": err.Error()})
 			return
 		}
-		fmt.Println("newUser01", newUser)
+
+		// 创建默认的emoji pack
+		emojiPack = model.EmojiPack{
+			Name:       "我喜欢的EMOJI单",
+			IconURL:    "",
+			IsDefault:  true,
+			AuthorUUID: uuid,
+		}
+		if err := database.DB.Create(&emojiPack).Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 500, "message": "创建默认表情包失败，请稍后重试", "error": err.Error()})
+			return
+		}
+
 		token01, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(5*time.Minute))
 		token02, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(7*24*time.Minute))
 		c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"accessToken": token01, "refreshToken": token02}})
 		return
 	}
-	fmt.Println("newUser02", newUser)
+
 	token01, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(5*time.Minute))
 	token02, _ := jwtMain.GenerateToken(newUser.Uuid, time.Now().Add(7*24*time.Minute))
 	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "登录成功", "data": gin.H{"accessToken": token01, "refreshToken": token02}})

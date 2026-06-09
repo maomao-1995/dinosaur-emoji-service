@@ -37,7 +37,7 @@ func SendCode(c *gin.Context) {
 
 	jsonErr := c.ShouldBindJSON(&params)
 	if jsonErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "error": jsonErr.Error(), "msg": "参数错误"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "error": jsonErr.Error(), "msg": "参数错误"})
 		return
 	}
 
@@ -50,13 +50,13 @@ func SendCode(c *gin.Context) {
 
 	_, getErr := redisMain.Rdb.Get(redisMain.Ctx, params.Phone).Result()
 	if getErr == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "验证码未过期，请稍后再试"})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "验证码未过期，请稍后再试"})
 		return
 	}
 
 	setErr := redisMain.Rdb.Set(redisMain.Ctx, params.Phone, "123", 1*time.Minute).Err()
 	if setErr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "设置验证码失败", "error": setErr.Error()})
+		c.JSON(http.StatusOK, gin.H{"code": 400, "msg": "设置验证码失败", "error": setErr.Error()})
 		return
 	}
 
@@ -81,7 +81,7 @@ func Refresh(c *gin.Context) {
 	tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 	claims, claimsErr := jwtMain.ParseToken(tokenStr)
 	if claimsErr != nil {
-		c.AbortWithStatusJSON(401, gin.H{"code": 401, "msg": "非法或过期 token", "error": claimsErr.Error()})
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": 401, "msg": "非法或过期 token", "error": claimsErr.Error()})
 		return
 	}
 
