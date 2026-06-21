@@ -28,7 +28,8 @@ func InitMySQL(cfg config.MySQLConfig) {
 	db.AutoMigrate(&model.User{})
 	db.AutoMigrate(&model.Emoji{})
 	db.AutoMigrate(&model.EmojiPack{})
-	db.AutoMigrate(&model.EmojiPack_Emoji{})
+	db.AutoMigrate(&model.EmojiPackEmoji{})
+	db.AutoMigrate(&model.EmojiPackCollection{})
 
 	DB = db
 }

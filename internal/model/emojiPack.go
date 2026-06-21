@@ -19,9 +19,16 @@ type EmojiPack struct {
 	AuthorUUID       string         `gorm:"size:36;not null" json:"authorUuid"`
 }
 
-type EmojiPack_Emoji struct {
+type EmojiPackEmoji struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
 	EmojiPackID uint      `gorm:"index" json:"emojiPackId"`
 	EmojiID     uint      `gorm:"index" json:"emojiId"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type EmojiPackCollection struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	EmojiPackID uint      `gorm:"index" json:"emojiPackId"`
+	AuthorUUID  string    `gorm:"size:36;not null" json:"authorUuid"`
 	CreatedAt   time.Time `json:"createdAt"`
 }

@@ -12,13 +12,13 @@ func ParseToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr := c.GetHeader("Authorization")
 		if tokenStr == "" || !strings.HasPrefix(tokenStr, "Bearer ") {
-			c.AbortWithStatusJSON(400, gin.H{"code": 401, "msg": "没有token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "没有token"})
 			return
 		}
 		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
 		claims, claimsErr := jwtMain.ParseToken(tokenStr)
 		if claimsErr != nil {
-			c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": 401, "msg": "非法或过期 token", "error": claimsErr.Error()})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "非法或过期 token", "error": claimsErr.Error()})
 			return
 		}
 		c.Set("uuid", claims.Uuid)

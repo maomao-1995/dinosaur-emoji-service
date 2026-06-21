@@ -18,7 +18,7 @@ func SetupRouter() *gin.Engine {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"}, // 允许所有域名，生产可指定前端地址
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "refresh_token"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -36,7 +36,7 @@ func SetupRouter() *gin.Engine {
 	// 启动服务
 	// 注意：默认是阻塞式的，会一直运行直到被中断
 
-	//全局路由
+	//global路由
 	r.POST("/sendCode", handler.SendCode)
 	r.GET("/refresh", handler.Refresh)
 	r.POST("/upload", handler.Upload)
