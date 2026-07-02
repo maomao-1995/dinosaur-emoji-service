@@ -12,6 +12,7 @@ type EmojiPack struct {
 	IconURL          string         `gorm:"size:255" json:"iconUrl"`
 	View_count       int            `gorm:"default:0" json:"viewCount"`
 	IsDefault        bool           `gorm:"default:false" json:"isDefault"`
+	Description      string         `gorm:"size:255" json:"description"`
 	Tags             datatypes.JSON `gorm:"type:json" json:"tags"`
 	Collection_count int            `gorm:"default:0" json:"collectionCount"`
 	CreatedAt        time.Time      `json:"createdAt"`

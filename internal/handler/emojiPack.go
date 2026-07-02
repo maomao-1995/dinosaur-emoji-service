@@ -12,9 +12,10 @@ import (
 )
 
 type EmojiAddPackRequest struct {
-	Name    string   `json:"name" binding:"required"`
-	IconURL string   `json:"iconUrl"`
-	Tags    []string `json:"tags"`
+	Name        string   `json:"name" binding:"required"`
+	IconURL     string   `json:"iconUrl"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
 }
 
 // EmojiPackAdd 创建表情包合集
@@ -30,7 +31,7 @@ type EmojiAddPackRequest struct {
 func EmojiPackAdd(c *gin.Context) {
 	var params EmojiAddPackRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
-		c.JSON(400, gin.H{"code": 400, "msg": "创建失败", "error": err.Error()})
+		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
 		return
 	}
 
@@ -45,6 +46,7 @@ func EmojiPackAdd(c *gin.Context) {
 		View_count:       0,
 		Collection_count: 0,
 		AuthorUUID:       c.GetString("uuid"),
+		Description:      params.Description,
 	}
 	fmt.Println("EmojiPackInstance==", EmojiPackInstance)
 	if err := database.DB.Create(&EmojiPackInstance).Error; err != nil {
@@ -56,10 +58,11 @@ func EmojiPackAdd(c *gin.Context) {
 }
 
 type EmojiEditPackRequest struct {
-	Id      uint     `json:"id" binding:"required"`
-	Name    string   `json:"name" binding:"required"`
-	IconURL string   `json:"iconUrl"`
-	Tags    []string `json:"tags"`
+	Id          uint     `json:"id" binding:"required"`
+	Name        string   `json:"name" binding:"required"`
+	IconURL     string   `json:"iconUrl"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
 }
 
 // EmojiPackEdit 编辑表情包合集
@@ -84,9 +87,10 @@ func EmojiPackEdit(c *gin.Context) {
 	tagsTemp := datatypes.JSON(json.RawMessage(temp))
 	// 更新表情包合集信息
 	emojiPackInstance := model.EmojiPack{
-		Name:    params.Name,
-		IconURL: params.IconURL,
-		Tags:    tagsTemp,
+		Name:        params.Name,
+		IconURL:     params.IconURL,
+		Tags:        tagsTemp,
+		Description: params.Description,
 	}
 	fmt.Println("emojiPackInstance==", emojiPackInstance)
 
@@ -128,16 +132,24 @@ func EmojiPackDelete(c *gin.Context) {
 }
 
 type EmojiPackDetailRequest struct {
-	ID uint `json:"id" binding:"required"`
+	ID uint `form:"id" binding:"required"`
+}
+type AuthorInfo struct {
+	UUID        string `json:"uuid"`
+	Username    string `json:"username"`
+	Avatar      string `json:"avatar"`
+	Description string `json:"description"`
 }
 type EmojiPackDetailDTO struct {
-	ID               uint     `json:"id"`
-	Name             string   `json:"name"`
-	IconURL          string   `json:"iconUrl"`
-	Tags             []string `json:"tags"`
-	View_count       int      `json:"view_count"`
-	Collection_count int      `json:"collection_count"`
-	AuthorUUID       string   `json:"authorUUID"`
+	ID               uint       `json:"id"`
+	Name             string     `json:"name"`
+	IconURL          string     `json:"iconUrl"`
+	Tags             []string   `json:"tags"`
+	View_count       int        `json:"view_count"`
+	Collection_count int        `json:"collection_count"`
+	Description      string     `json:"description"`
+	AuthorUUID       string     `json:"authorUUID"`
+	AuthorInfo       AuthorInfo `json:"authorInfo"`
 }
 
 // EmojiPackDetail 获取表情包合集详情
@@ -151,32 +163,50 @@ type EmojiPackDetailDTO struct {
 // @Failure 400 {object} map[string]interface{} "{"code":400,"msg":"xxxx"}"
 // @Router /emojiPack/detail [post]
 func EmojiPackDetail(c *gin.Context) {
-	var params EmojiPackDeleteRequest
+	var params EmojiPackDetailRequest
 
-	if err := c.ShouldBindJSON(&params); err != nil {
+	if err := c.ShouldBindQuery(&params); err != nil {
 		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
 		return
 	}
-	var emojiPack model.EmojiPack
-	if err := database.DB.Where("id = ?", params.ID).First(&emojiPack).Error; err != nil {
-		c.JSON(404, gin.H{"code": 404, "msg": "表情包合集未找到", "error": err.Error()})
+
+	var emojiPackDetail model.EmojiPack
+	var emojiPackDetailDTO EmojiPackDetailDTO
+	if err := database.DB.Model(&model.EmojiPack{}).Where("id = ?", params.ID).First(&emojiPackDetail).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集详情失败", "error": err.Error()})
 		return
 	}
-	var emojiPackDetail model.EmojiPack
-	var EmojiPackDetailDTO EmojiPackDetailDTO
-	if err := database.DB.Model(&model.EmojiPack{}).Where("id = ?", params.ID).First(&emojiPackDetail).Scan(&EmojiPackDetailDTO).Error; err != nil {
-		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集详情失败", "error": err.Error()})
+	//通过作者UUID获取作者信息
+	var authorInfo model.User
+	if err := database.DB.Model(&model.User{}).Where("uuid = ?", emojiPackDetail.AuthorUUID).First(&authorInfo).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "获取作者信息失败", "error": err.Error()})
 		return
 	}
 
 	//data解析
-	EmojiPackDetailDTO.Tags = make([]string, 0)
-	if err := json.Unmarshal(emojiPackDetail.Tags, &EmojiPackDetailDTO.Tags); err != nil {
+	emojiPackDetailDTO = EmojiPackDetailDTO{
+		ID:               emojiPackDetail.ID,
+		Name:             emojiPackDetail.Name,
+		IconURL:          emojiPackDetail.IconURL,
+		View_count:       emojiPackDetail.View_count,
+		Collection_count: emojiPackDetail.Collection_count,
+		Description:      emojiPackDetail.Description,
+		AuthorUUID:       emojiPackDetail.AuthorUUID,
+	}
+	emojiPackDetailDTO.Tags = make([]string, 0)
+	if err := json.Unmarshal(emojiPackDetail.Tags, &emojiPackDetailDTO.Tags); err != nil {
 		c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集详情成功", "data": EmojiPackDetailDTO})
+	emojiPackDetailDTO.AuthorInfo = AuthorInfo{
+		UUID:        authorInfo.Uuid,
+		Username:    authorInfo.Username,
+		Avatar:      authorInfo.Avatar,
+		Description: authorInfo.Description,
+	}
+
+	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集详情成功", "data": emojiPackDetailDTO})
 }
 
 type EmojiListReq struct {
@@ -418,15 +448,24 @@ func EmojiPackRemoveEmoji(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"code": 200, "msg": "从表情包合集移除表情成功"})
+
 }
 
 type EmojiPackGetEmojisRequest struct {
-	EmojiPackID uint `json:"emojiPackId" binding:"required"`
+	EmojiPackID uint `form:"emojiPackId" binding:"required"`
+	Page        int  `form:"page" binding:"omitempty,min=1"`
+	PageSize    int  `form:"pageSize" binding:"omitempty,min=1,max=50"`
 }
 type EmojiPackGetEmojisDTO struct {
 	Name string   `json:"name"`
 	URL  string   `json:"url"`
 	Tags []string `json:"tags"`
+}
+type EmojiPackGetEmojisResponse[T any] struct {
+	List     []T   `json:"list"`
+	Total    int64 `json:"total"`
+	Page     int   `json:"page"`
+	PageSize int   `json:"pageSize"`
 }
 
 // emojiPackGetemojis 获取表情包合集内的表情列表
@@ -434,26 +473,44 @@ type EmojiPackGetEmojisDTO struct {
 // @Tags emojiPack
 // @Accept json
 // @Produce json
-// @Param emojiPack body EmojiPackDeleteRequest true "EmojiPack ID"
+// @Param emojiPack query EmojiPackGetEmojisRequest true "EmojiPack ID and pagination"
 // @Success 200 {object} map[string]interface{} "{"code":200,"msg":"获取表情包合集内的表情列表成功","data":[]}"
 // @Failure 400 {object} map[string]interface{} "{"code":400,"msg":"xxxx"}"
-// @Router /emojiPack/getemojis [post]
+// @Router /emojiPack/getemojis [get]
 func EmojiPackGetEmojis(c *gin.Context) {
 	var params EmojiPackGetEmojisRequest
-	if err := c.ShouldBindJSON(&params); err != nil {
+	if err := c.ShouldBindQuery(&params); err != nil {
 		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
 		return
 	}
+
+	if params.Page == 0 {
+		params.Page = 1
+	}
+	if params.PageSize == 0 {
+		params.PageSize = 12
+	}
+
+	var total int64
+	countDB := database.DB.Table("emoji_pack_emojis").
+		Joins("join emojis on emoji_pack_emojis.emoji_id = emojis.id").
+		Where("emoji_pack_emojis.emoji_pack_id = ?", params.EmojiPackID)
+	if err := countDB.Count(&total).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "统计表情包内表情总数失败", "error": err.Error()})
+		return
+	}
+
+	offset := (params.Page - 1) * params.PageSize
 	var emojis []model.Emoji
-	if err := database.DB.Table("emoji_pack_emojis").Select("emojis.name, emojis.url, emojis.tags").
+	queryDB := database.DB.Table("emoji_pack_emojis").Select("emojis.name, emojis.url, emojis.tags").
 		Joins("join emojis on emoji_pack_emojis.emoji_id = emojis.id").
 		Where("emoji_pack_emojis.emoji_pack_id = ?", params.EmojiPackID).
-		Scan(&emojis).Error; err != nil {
+		Limit(params.PageSize).Offset(offset)
+	if err := queryDB.Scan(&emojis).Error; err != nil {
 		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集内的表情列表失败", "error": err.Error()})
 		return
 	}
 
-	// 处理数据
 	resp := make([]EmojiPackGetEmojisDTO, 0, len(emojis))
 	for _, pack := range emojis {
 		tagsTemp := make([]string, 0)
@@ -468,5 +525,12 @@ func EmojiPackGetEmojis(c *gin.Context) {
 		})
 	}
 
-	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集内的表情列表成功", "data": resp})
+	pageData := EmojiPackGetEmojisResponse[EmojiPackGetEmojisDTO]{
+		List:     resp,
+		Total:    total,
+		Page:     params.Page,
+		PageSize: params.PageSize,
+	}
+
+	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集内的表情列表成功", "data": pageData})
 }
