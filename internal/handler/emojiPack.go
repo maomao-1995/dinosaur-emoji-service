@@ -193,10 +193,15 @@ func EmojiPackDetail(c *gin.Context) {
 		Description:      emojiPackDetail.Description,
 		AuthorUUID:       emojiPackDetail.AuthorUUID,
 	}
-	emojiPackDetailDTO.Tags = make([]string, 0)
-	if err := json.Unmarshal(emojiPackDetail.Tags, &emojiPackDetailDTO.Tags); err != nil {
-		c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
-		return
+	//tag是null时，解析会报错，所以先初始化一个空切片
+	if emojiPackDetail.Tags == nil {
+		emojiPackDetailDTO.Tags = make([]string, 0)
+	} else {
+		emojiPackDetailDTO.Tags = make([]string, 0)
+		if err := json.Unmarshal(emojiPackDetail.Tags, &emojiPackDetailDTO.Tags); err != nil {
+			c.JSON(500, gin.H{"code": 500, "msg": "解析表情包合集标签失败", "error": err.Error()})
+			return
+		}
 	}
 
 	emojiPackDetailDTO.AuthorInfo = AuthorInfo{
@@ -265,7 +270,6 @@ func EmojiPackList(c *gin.Context) {
 		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集列表失败", "error": err.Error()})
 		return
 	}
-
 	// model转DTO
 	listDto := make([]EmojiPackListDTO, 0, len(emojiPacks))
 	for _, pack := range emojiPacks {
@@ -416,6 +420,13 @@ func EmojiPackAddEmoji(c *gin.Context) {
 		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
 		return
 	}
+	// 如有数据库中已存在该表情包和表情的关联，则不再添加
+	var existingRelation model.EmojiPackEmoji
+	if err := database.DB.Where("emoji_pack_id = ? AND emoji_id = ?", params.EmojiPackID, params.EmojiID).First(&existingRelation).Error; err == nil {
+		c.JSON(400, gin.H{"code": 200, "msg": "表情已存在于该表情包合集中"})
+		return
+	}
+
 	emojiPackEmoji := model.EmojiPackEmoji{
 		EmojiPackID: params.EmojiPackID,
 		EmojiID:     params.EmojiID,
@@ -457,6 +468,7 @@ type EmojiPackGetEmojisRequest struct {
 	PageSize    int  `form:"pageSize" binding:"omitempty,min=1,max=50"`
 }
 type EmojiPackGetEmojisDTO struct {
+	ID   uint     `json:"id"`
 	Name string   `json:"name"`
 	URL  string   `json:"url"`
 	Tags []string `json:"tags"`
@@ -502,7 +514,7 @@ func EmojiPackGetEmojis(c *gin.Context) {
 
 	offset := (params.Page - 1) * params.PageSize
 	var emojis []model.Emoji
-	queryDB := database.DB.Table("emoji_pack_emojis").Select("emojis.name, emojis.url, emojis.tags").
+	queryDB := database.DB.Table("emoji_pack_emojis").Select("emojis.id, emojis.name, emojis.url, emojis.tags").
 		Joins("join emojis on emoji_pack_emojis.emoji_id = emojis.id").
 		Where("emoji_pack_emojis.emoji_pack_id = ?", params.EmojiPackID).
 		Limit(params.PageSize).Offset(offset)
@@ -519,6 +531,7 @@ func EmojiPackGetEmojis(c *gin.Context) {
 			return
 		}
 		resp = append(resp, EmojiPackGetEmojisDTO{
+			ID:   pack.ID,
 			Name: pack.Name,
 			URL:  pack.URL,
 			Tags: tagsTemp,
