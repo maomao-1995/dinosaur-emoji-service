@@ -30,6 +30,6 @@ type EmojiPackEmoji struct {
 type EmojiPackCollection struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
 	EmojiPackID uint      `gorm:"index" json:"emojiPackId"`
-	AuthorUUID  string    `gorm:"size:36;not null" json:"authorUuid"`
+	UserUUID    string    `gorm:"size:36;not null" json:"userUuid"`
 	CreatedAt   time.Time `json:"createdAt"`
 }

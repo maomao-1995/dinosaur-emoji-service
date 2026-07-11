@@ -78,6 +78,8 @@ func SetupRouter() *gin.Engine {
 		emojiPackPrivata.GET("/listByUser", handler.EmojiPackListByUser)
 		emojiPackPrivata.POST("/emojiPackAddEmoji", handler.EmojiPackAddEmoji)
 		emojiPackPrivata.POST("/emojiPackRemoveEmoji", handler.EmojiPackRemoveEmoji)
+		emojiPackPrivata.POST("/emojiPackCollection", handler.EmojiPackCollection)
+
 	}
 	emojiPackPublic := emojiPackGroup.Group("")
 	{

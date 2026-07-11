@@ -135,10 +135,14 @@ type EmojiPackDetailRequest struct {
 	ID uint `form:"id" binding:"required"`
 }
 type AuthorInfo struct {
-	UUID        string `json:"uuid"`
+	// UUID        string `json:"uuid"`
 	Username    string `json:"username"`
 	Avatar      string `json:"avatar"`
 	Description string `json:"description"`
+}
+type OtherInfo struct {
+	CollectionCount int  `json:"collectionCount"`
+	IsCollection    bool `json:"isCollection"`
 }
 type EmojiPackDetailDTO struct {
 	ID               uint       `json:"id"`
@@ -150,6 +154,7 @@ type EmojiPackDetailDTO struct {
 	Description      string     `json:"description"`
 	AuthorUUID       string     `json:"authorUUID"`
 	AuthorInfo       AuthorInfo `json:"authorInfo"`
+	OtherInfo        OtherInfo  `json:"otherInfo"`
 }
 
 // EmojiPackDetail 获取表情包合集详情
@@ -205,10 +210,31 @@ func EmojiPackDetail(c *gin.Context) {
 	}
 
 	emojiPackDetailDTO.AuthorInfo = AuthorInfo{
-		UUID:        authorInfo.Uuid,
+		// UUID:        authorInfo.Uuid,
 		Username:    authorInfo.Username,
 		Avatar:      authorInfo.Avatar,
 		Description: authorInfo.Description,
+	}
+	//查询收藏数
+	Db := database.DB.Model(&model.EmojiPackCollection{}).Where("emoji_pack_id = ?", params.ID)
+	var collectionCount int64
+	if err := Db.Count(&collectionCount).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "获取收藏数失败", "error": err.Error()})
+		return
+	}
+	//查询当前用户是否收藏
+	userUUID := c.GetString("uuid")
+	var isCollection bool
+	if userUUID != "" {
+		var collection model.EmojiPackCollection
+		if err := database.DB.Model(&model.EmojiPackCollection{}).Where("emoji_pack_id = ? AND user_uuid = ?", params.ID, userUUID).First(&collection).Error; err == nil {
+			isCollection = true
+		}
+	}
+
+	emojiPackDetailDTO.OtherInfo = OtherInfo{
+		CollectionCount: int(collectionCount),
+		IsCollection:    isCollection,
 	}
 
 	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集详情成功", "data": emojiPackDetailDTO})
@@ -546,4 +572,63 @@ func EmojiPackGetEmojis(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集内的表情列表成功", "data": pageData})
+}
+
+type EmojiPackCollectionRequest struct {
+	EmojiPackID  uint  `json:"emojiPackId" binding:"required"`
+	IsCollection *bool `json:"isCollection" binding:"required"`
+}
+
+//收藏/取消 表情包集合
+// @Description 收藏表情包集合
+// @Tags emojiPack
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Authorization"
+
+// @Param emojiPack body EmojiPackCollectionRequest true "EmojiPack ID和收藏状态"
+// @Success 200 {object} map[string]interface{} "{"code":200,"msg":"收藏表情包合集成功"}"
+// @Failure 400 {object} map[string]interface{} "{"code":400,"msg":"xxxx"}"
+// @Router /emojiPack/collection [post]
+
+func EmojiPackCollection(c *gin.Context) {
+	//IsCollection false 取消收藏 true 收藏
+
+	var params EmojiPackCollectionRequest
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		return
+	}
+	// 获取用户UUID
+	userUUID := c.GetString("uuid")
+	if params.IsCollection == nil {
+		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": "isCollection is required"})
+		return
+	}
+
+	if *params.IsCollection {
+		// 添加收藏
+		collection := model.EmojiPackCollection{
+			EmojiPackID: params.EmojiPackID,
+			UserUUID:    userUUID,
+		}
+		// 检查是否已经收藏过
+		var existingCollection model.EmojiPackCollection
+		if err := database.DB.Where("emoji_pack_id = ? AND user_uuid = ?", params.EmojiPackID, userUUID).First(&existingCollection).Error; err == nil {
+			c.JSON(200, gin.H{"code": 200, "msg": "已经收藏过该表情包合集"})
+			return
+		}
+		if err := database.DB.Create(&collection).Error; err != nil {
+			c.JSON(500, gin.H{"code": 500, "msg": "收藏表情包合集失败", "error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 200, "msg": "收藏表情包合集成功"})
+	} else {
+		// 取消收藏
+		if err := database.DB.Where("emoji_pack_id = ? AND user_uuid = ?", params.EmojiPackID, userUUID).Delete(&model.EmojiPackCollection{}).Error; err != nil {
+			c.JSON(500, gin.H{"code": 500, "msg": "取消收藏表情包合集失败", "error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 200, "msg": "取消收藏表情包合集成功"})
+	}
 }
