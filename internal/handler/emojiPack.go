@@ -140,21 +140,19 @@ type AuthorInfo struct {
 	Avatar      string `json:"avatar"`
 	Description string `json:"description"`
 }
-type OtherInfo struct {
-	CollectionCount int  `json:"collectionCount"`
-	IsCollection    bool `json:"isCollection"`
-}
+
 type EmojiPackDetailDTO struct {
-	ID               uint       `json:"id"`
-	Name             string     `json:"name"`
-	IconURL          string     `json:"iconUrl"`
-	Tags             []string   `json:"tags"`
-	View_count       int        `json:"view_count"`
-	Collection_count int        `json:"collection_count"`
-	Description      string     `json:"description"`
-	AuthorUUID       string     `json:"authorUUID"`
-	AuthorInfo       AuthorInfo `json:"authorInfo"`
-	OtherInfo        OtherInfo  `json:"otherInfo"`
+	ID              uint       `json:"id"`
+	Name            string     `json:"name"`
+	IconURL         string     `json:"iconUrl"`
+	Tags            []string   `json:"tags"`
+	ViewCount       int        `json:"viewCount"`
+	Description     string     `json:"description"`
+	AuthorUUID      string     `json:"authorUUID"`
+	AuthorInfo      AuthorInfo `json:"authorInfo"`
+	CollectionCount int        `json:"collectionCount"`
+	IsCollection    bool       `json:"isCollection"`
+	CanEdit         bool       `json:"canEdit"`
 }
 
 // EmojiPackDetail 获取表情包合集详情
@@ -190,13 +188,12 @@ func EmojiPackDetail(c *gin.Context) {
 
 	//data解析
 	emojiPackDetailDTO = EmojiPackDetailDTO{
-		ID:               emojiPackDetail.ID,
-		Name:             emojiPackDetail.Name,
-		IconURL:          emojiPackDetail.IconURL,
-		View_count:       emojiPackDetail.View_count,
-		Collection_count: emojiPackDetail.Collection_count,
-		Description:      emojiPackDetail.Description,
-		AuthorUUID:       emojiPackDetail.AuthorUUID,
+		ID:          emojiPackDetail.ID,
+		Name:        emojiPackDetail.Name,
+		IconURL:     emojiPackDetail.IconURL,
+		ViewCount:   emojiPackDetail.View_count,
+		Description: emojiPackDetail.Description,
+		AuthorUUID:  emojiPackDetail.AuthorUUID,
 	}
 	//tag是null时，解析会报错，所以先初始化一个空切片
 	if emojiPackDetail.Tags == nil {
@@ -232,10 +229,15 @@ func EmojiPackDetail(c *gin.Context) {
 		}
 	}
 
-	emojiPackDetailDTO.OtherInfo = OtherInfo{
-		CollectionCount: int(collectionCount),
-		IsCollection:    isCollection,
+	emojiPackDetailDTO.CollectionCount = int(collectionCount)
+	emojiPackDetailDTO.IsCollection = isCollection
+
+	//查询当前用户是否是作者
+	canEdit := false
+	if userUUID == emojiPackDetail.AuthorUUID {
+		canEdit = true
 	}
+	emojiPackDetailDTO.CanEdit = canEdit
 
 	c.JSON(200, gin.H{"code": 200, "msg": "获取表情包合集详情成功", "data": emojiPackDetailDTO})
 }
@@ -378,7 +380,7 @@ func EmojiPackListByUser(c *gin.Context) {
 		})
 	}
 
-	db02 := database.DB.Model(&model.EmojiPackCollection{}).Where("author_uuid = ?", userUUID)
+	db02 := database.DB.Model(&model.EmojiPackCollection{}).Where("user_uuid = ?", userUUID)
 	var collections []model.EmojiPackCollection
 	if err := db02.Find(&collections).Error; err != nil {
 		c.JSON(500, gin.H{"code": 500, "msg": "获取表情包合集列表失败", "error": err.Error()})
