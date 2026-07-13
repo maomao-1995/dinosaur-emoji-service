@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type EmojiAddPackRequest struct {
@@ -633,4 +634,23 @@ func EmojiPackCollection(c *gin.Context) {
 		}
 		c.JSON(200, gin.H{"code": 200, "msg": "取消收藏表情包合集成功"})
 	}
+}
+
+type EmojiPackAddViewCountRequest struct {
+	EmojiPackID uint `json:"emojiPackId" binding:"required"`
+}
+
+// 增加emojiPack viewCount
+func EmojiPackAddViewCount(c *gin.Context) {
+	var params EmojiPackAddViewCountRequest
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
+		return
+	}
+	// 使用原子操作增加 view_count
+	if err := database.DB.Model(&model.EmojiPack{}).Where("id = ?", params.EmojiPackID).UpdateColumn("view_count", gorm.Expr("view_count + ?", 1)).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "增加表情包合集浏览量失败", "error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 200, "msg": "增加表情包合集浏览量成功"})
 }

@@ -85,6 +85,7 @@ func SetupRouter() *gin.Engine {
 	{
 		emojiPackPublic.GET("/list", handler.EmojiPackList)
 		emojiPackPublic.GET("/emojiPackGetEmojis", handler.EmojiPackGetEmojis)
+		emojiPackPublic.POST("/emojiPackAddViewCount", handler.EmojiPackAddViewCount)
 	}
 
 	return r
