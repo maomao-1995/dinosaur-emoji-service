@@ -123,9 +123,18 @@ func EmojiPackDelete(c *gin.Context) {
 		c.JSON(400, gin.H{"code": 400, "msg": "参数错误", "error": err.Error()})
 		return
 	}
-	fmt.Println("删除表情包合集，ID：", params.ID)
 	if err := database.DB.Model(&model.EmojiPack{}).Where("id = ?", params.ID).Delete(&model.EmojiPack{}).Error; err != nil {
 		c.JSON(404, gin.H{"code": 404, "msg": "表情包合集未找到", "error": err.Error()})
+		return
+	}
+	//删除表情包合集和表情的关联
+	if err := database.DB.Where("emoji_pack_id = ?", params.ID).Delete(&model.EmojiPackEmoji{}).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "删除表情包合集关联表情失败", "error": err.Error()})
+		return
+	}
+	//删除表情包合集和收藏的关联
+	if err := database.DB.Where("emoji_pack_id = ?", params.ID).Delete(&model.EmojiPackCollection{}).Error; err != nil {
+		c.JSON(500, gin.H{"code": 500, "msg": "删除表情包合集关联收藏失败", "error": err.Error()})
 		return
 	}
 
@@ -641,6 +650,14 @@ type EmojiPackAddViewCountRequest struct {
 }
 
 // 增加emojiPack viewCount
+// @Description 增加emojiPack viewCount
+// @Tags emojiPack
+// @Accept json
+// @Produce json
+// @Param emojiPack body EmojiPackAddViewCountRequest true "EmojiPack ID"
+// @Success 200 {object} map[string]interface{} "{"code":200,"msg":"增加表情包合集浏览量成功"}"
+// @Failure 400 {object} map[string]interface{} "{"code":400,"msg":"xxxx"}"
+// @Router /emojiPack/emojiPackAddViewCount [post]
 func EmojiPackAddViewCount(c *gin.Context) {
 	var params EmojiPackAddViewCountRequest
 	if err := c.ShouldBindJSON(&params); err != nil {
